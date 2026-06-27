@@ -1,0 +1,704 @@
+{
+  "name": "EnerSmart",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -848,
+        64
+      ],
+      "id": "12f9053e-d9e7-4eec-91dd-199fea1d9138",
+      "name": "Trigger mensual"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appoRxEFW6XJNwY3K",
+          "mode": "list",
+          "cachedResultName": "EnerSmart",
+          "cachedResultUrl": "https://airtable.com/appoRxEFW6XJNwY3K"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblECsSA6BnBdmAya",
+          "mode": "list",
+          "cachedResultName": "Clientes",
+          "cachedResultUrl": "https://airtable.com/appoRxEFW6XJNwY3K/tblECsSA6BnBdmAya"
+        },
+        "filterByFormula": "{estado_reporte} = 'Pendiente'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        -656,
+        -96
+      ],
+      "id": "122e15aa-75e6-4475-9faf-6b7b54d8bce3",
+      "name": "Buscar Clientes Pendientes",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "153XO1vYxxUh4dr6",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -464,
+        64
+      ],
+      "id": "39d2e4df-2cfd-4b3b-8511-b61c4f7ea359",
+      "name": "Loop por Cliente"
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        -96
+      ],
+      "id": "b7f9a798-b537-4415-90bb-42f5aaf0828a",
+      "name": "Espera 3 segundos",
+      "webhookId": "ec1fe716-5bb8-486c-bbbc-0d1013df8104"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Antes de generar el reporte, tu primer paso obligatorio es consultar la herramienta disponible para obtener la temperatura y humedad actual de la zona. Hacé esto siempre, sin excepción, como primera acción.\n\nSos un especialista en eficiencia energética. Analizá los siguientes datos de consumo eléctrico de la empresa y generá un reporte profesional en español.\n\nEmpresa: {{ $json.fields.nombre_empresa }}\nCiudad: {{ $json.fields.ciudad }}\nSector: {{ $json.fields.sector }}\nConsumo mensual: {{ $json.fields.consumo_mensual }}\n\nUsá el dato de temperatura y humedad que obtuviste para contextualizar el reporte: si la temperatura es alta o baja, mencioná cómo eso puede influir en el consumo de climatización (aire acondicionado o calefacción) y ajustá tus recomendaciones en consecuencia.\n\nEl reporte debe incluir:\n1. Resumen del consumo actual\n2. Comparación con promedios del sector\n3. Tres recomendaciones concretas de ahorro\n4. Estimación de ahorro potencial en porcentaje\n\nSé claro, directo y profesional. Máximo 300 palabras.\n\nAl final del reporte, en una línea separada, agregá exactamente lo siguiente:\nPRIORIDAD: ALTA  -> si el ahorro potencial estimado es mayor o igual a 15%\nPRIORIDAD: BAJA -> si el ahorro potencial estimado es menor a 15%\n\nEsa línea debe ser la última del mensaje, sin texto adicional después.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -80,
+        64
+      ],
+      "id": "1d8eccae-bcb5-4a72-8044-c4d10c0a89aa",
+      "name": "Agente de Eficiencia Energetica",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        240
+      ],
+      "id": "f5aaf4d6-5da4-4230-91bc-af3ddfae10ac",
+      "name": "Modelo Groq Llama 3",
+      "credentials": {
+        "groqApi": {
+          "id": "BD7xgyahZFTGCys9",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Devuelve la temperatura actual y humedad en Mar del Plata, Argentina. Útil para contextualizar el consumo energético relacionado con calefacción o refrigeración.",
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=-38.0055&longitude=-57.5426&current=temperature_2m,relative_humidity_2m",
+        "options": {},
+        "optimizeResponse": true
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        64,
+        336
+      ],
+      "id": "d47b19f3-ef4a-4e0c-87d7-43d394fa22af",
+      "name": "API Clima en Tiempo Real"
+    },
+    {
+      "parameters": {
+        "sendTo": "santilarrain1@gmail.com",
+        "subject": "[EnerSmart] Reporte pendiente de aprobacion",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        -96
+      ],
+      "id": "91bb9d0d-83d5-45c4-b041-fcd2793ded3f",
+      "name": "Gmail Aprobacion",
+      "webhookId": "1c25faef-0392-47bc-aba0-fdc9fa6d4cca",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "K6x2P2huvxO2Jhrh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "santilarrain1@gmail.com",
+        "subject": "[EnerSmart] ERROR - Falló el procesamiento de un cliente",
+        "emailType": "text",
+        "message": "Hubo un error al generar el reporte para un cliente después de 3 reintentos. Revisar manualmente.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        224
+      ],
+      "id": "73f0de79-6ac1-4357-8064-9d33016b6ab4",
+      "name": "Gmail Error",
+      "webhookId": "76e27f4a-c592-4bc3-a805-f13eb690a241",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "K6x2P2huvxO2Jhrh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ef25b927-5b31-41b7-aa30-b807ccb95733",
+              "leftValue": "={{ $('Agente de Eficiencia Energetica').item.json.output.includes('PRIORIDAD: ALTA') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        64
+      ],
+      "id": "bec6f992-3d5d-44c9-a952-f247ddb974bc",
+      "name": "IF Prioridad Alta o Baja"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Buscar Clientes Pendientes').item.json.fields.email_contacto }}",
+        "subject": "[EnerSmart] Tu reporte de eficiencia energética - Prioridad Alta",
+        "emailType": "text",
+        "message": "={{ $('Agente de Eficiencia Energetica').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        -96
+      ],
+      "id": "36ed7fd1-e070-4272-86c7-d0b78df5400f",
+      "name": "Gmail Cliente Alta",
+      "webhookId": "4d42422f-28b3-4307-9457-575a96ed2e5a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "K6x2P2huvxO2Jhrh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Buscar Clientes Pendientes').item.json.fields.email_contacto }}",
+        "subject": "[EnerSmart] Tu reporte de eficiencia energética",
+        "emailType": "text",
+        "message": "={{ $('Agente de Eficiencia Energetica').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        224
+      ],
+      "id": "ce4c71cd-4a16-4dc8-be83-4c1aadadb15d",
+      "name": "Gmail Cliente Baja",
+      "webhookId": "8e62c5ce-3b9e-4979-9ea9-30e03112a8fd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "K6x2P2huvxO2Jhrh",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "appoRxEFW6XJNwY3K",
+          "mode": "list",
+          "cachedResultName": "EnerSmart",
+          "cachedResultUrl": "https://airtable.com/appoRxEFW6XJNwY3K"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblECsSA6BnBdmAya",
+          "mode": "list",
+          "cachedResultName": "Clientes",
+          "cachedResultUrl": "https://airtable.com/appoRxEFW6XJNwY3K/tblECsSA6BnBdmAya"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('Buscar Clientes Pendientes').item.json.id }}",
+            "estado_reporte": "Enviado"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "nombre_empresa",
+              "displayName": "nombre_empresa",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "email_contacto",
+              "displayName": "email_contacto",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ciudad",
+              "displayName": "ciudad",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "sector",
+              "displayName": "sector",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Comercio",
+                  "value": "Comercio"
+                },
+                {
+                  "name": "Industria",
+                  "value": "Industria"
+                },
+                {
+                  "name": "Residencial",
+                  "value": "Residencial"
+                },
+                {
+                  "name": "Educación",
+                  "value": "Educación"
+                },
+                {
+                  "name": "Industrial",
+                  "value": "Industrial"
+                },
+                {
+                  "name": "Financiero",
+                  "value": "Financiero"
+                },
+                {
+                  "name": "Alimentos",
+                  "value": "Alimentos"
+                },
+                {
+                  "name": "Construcción",
+                  "value": "Construcción"
+                },
+                {
+                  "name": "Tecnología",
+                  "value": "Tecnología"
+                },
+                {
+                  "name": "Salud",
+                  "value": "Salud"
+                },
+                {
+                  "name": "Transporte",
+                  "value": "Transporte"
+                },
+                {
+                  "name": "Turismo",
+                  "value": "Turismo"
+                },
+                {
+                  "name": "Editorial",
+                  "value": "Editorial"
+                },
+                {
+                  "name": "Agropecuario",
+                  "value": "Agropecuario"
+                },
+                {
+                  "name": "Energía",
+                  "value": "Energía"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado_reporte",
+              "displayName": "estado_reporte",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pendiente",
+                  "value": "Pendiente"
+                },
+                {
+                  "name": "En proceso",
+                  "value": "En proceso"
+                },
+                {
+                  "name": "Aprobado",
+                  "value": "Aprobado"
+                },
+                {
+                  "name": "Enviado",
+                  "value": "Enviado"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "consumo_mensual",
+              "displayName": "consumo_mensual",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "fecha_ultimo_reporte",
+              "displayName": "fecha_ultimo_reporte",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "atencion_prioritaria",
+              "displayName": "atencion_prioritaria",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "No",
+                  "value": "No"
+                },
+                {
+                  "name": "Sí",
+                  "value": "Sí"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ubicacion_region",
+              "displayName": "ubicacion_region",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "contacto_valido",
+              "displayName": "contacto_valido",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Valido",
+                  "value": "Valido"
+                },
+                {
+                  "name": "No valido",
+                  "value": "No valido"
+                },
+                {
+                  "name": "Sí",
+                  "value": "Sí"
+                },
+                {
+                  "name": "No",
+                  "value": "No"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        64
+      ],
+      "id": "4255e15c-d18e-454a-8a9e-cc2d48da23de",
+      "name": "Airtable Actualizar Estado",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "153XO1vYxxUh4dr6",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger mensual": {
+      "main": [
+        [
+          {
+            "node": "Buscar Clientes Pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Clientes Pendientes": {
+      "main": [
+        [
+          {
+            "node": "Loop por Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop por Cliente": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Espera 3 segundos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop por Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Espera 3 segundos": {
+      "main": [
+        [
+          {
+            "node": "Agente de Eficiencia Energetica",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de Eficiencia Energetica": {
+      "main": [
+        [
+          {
+            "node": "Gmail Aprobacion",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modelo Groq Llama 3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de Eficiencia Energetica",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Clima en Tiempo Real": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente de Eficiencia Energetica",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Aprobacion": {
+      "main": [
+        [
+          {
+            "node": "IF Prioridad Alta o Baja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Prioridad Alta o Baja": {
+      "main": [
+        [
+          {
+            "node": "Gmail Cliente Alta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Cliente Baja",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Cliente Alta": {
+      "main": [
+        [
+          {
+            "node": "Airtable Actualizar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Cliente Baja": {
+      "main": [
+        [
+          {
+            "node": "Airtable Actualizar Estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5594e9e4-bd58-4f3d-a8cf-993b973076f5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8e8d9d929bc2eb9a6013fd5ba6bd017d6acb725f768c46ed4e11e5c63246b067"
+  },
+  "nodeGroups": [],
+  "id": "rkuTYPgTAVp8OhsW",
+  "tags": []
+}
